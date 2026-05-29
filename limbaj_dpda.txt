@@ -1,0 +1,52 @@
+ALPHABET: 0, 1
+STACK_ALPHABET: 0, 1, $
+STATES: q0, q1, q2, q3
+START: q0
+STACK_START: $
+FINALS: q2
+
+# --- EXPLICATIA STARILOR ---
+# q0: Starea initiala. Aici citim '0'-uri si le punem pe stiva pentru a le numara.
+# q1: Starea de "pop". Trecem aici la primul '1' citit. Aici doar scoatem '0'-uri de pe stiva pentru a echilibra, si blocam aparitia altor '0'-uri.
+# q2: Starea de ACCEPTARE (succes). Ajungem aici daca la finalul cuvantului stiva contine doar $.
+# q3: Starea de ESEC / RESPINGERE (trap state). Orice incalcare a regulii 0^k 1^k ne trimite aici.
+
+# Format: stare_curenta, simbol_citit, top_stiva -> stare_noua, push_stiva
+
+TRANSITIONS:
+# --- 1. CITIREA ZERO-URILOR IN q0 ---
+q0, 0, $ -> q0, 0$
+q0, 0, 0 -> q0, 00
+
+# --- 2. TRECEREA LA UNU-URI ---
+# La primul '1' citit, trecem din q0 in q1
+q0, 1, 0 -> q1, e
+
+# --- 3. ECHILIBRAREA IN q1 ---
+# Pentru fiecare '1' citit, scoatem un '0' de pe stiva
+q1, 1, 0 -> q1, e
+
+# --- 4. ACCEPTAREA (q2) ---
+# Daca e cuvantul vid (k=0) -> acceptam
+q0, e, $ -> q2, $
+# Daca s-a terminat cuvantul si stiva e goala (doar cu baza $) -> acceptam
+q1, e, $ -> q2, $
+
+# --- 5. LOGICA DE ESEC (q3) ---
+# Daca incepem direct cu '1'
+q0, 1, $ -> q3, e
+
+# Daca avem mai multi de '1' decat '0' (se termina '0'-urile de pe stiva)
+q1, 1, $ -> q3, e
+
+# Daca incercam sa citim '0' dupa ce am trecut la '1' (prevenim intercalarea gen 0101)
+q1, 0, e -> q3, e
+
+# Daca dupa ce am ajuns in starea de acceptare mai apar litere
+q2, 1, e -> q3, e
+q2, 0, e -> q3, e
+
+# --- 6. GOLIREA STIVEI IN STAREA DE ESEC (q3) ---
+# Curatam tot de pe stiva si ramanem blocati aici
+q3, e, 0 -> q3, e
+q3, e, e -> q3, e

@@ -1,0 +1,7 @@
+# Gramatica pentru limbajul 0^k 1^k
+START: S
+
+# Reguli (Format: Neterminal -> inlocuire)
+RULES:
+S -> 0S1
+S -> e
