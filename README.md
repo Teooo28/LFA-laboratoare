@@ -15,26 +15,18 @@ O evoluție a DFA-ului, capabilă să "numere" folosind o stivă.
 ### 3. Convertor Regex în NFA (Algoritmul lui Thompson)
 Un "compilator" de expresii regulate care transformă matematic un string într-un automat NFA.
 * **Mecanism:**
-  * 1. Adaugă explicit operatorii de concatenare (`.`).
-  * 2. Convertește expresia din forma Infixată în forma Postfixată folosind algoritmul **Shunting Yard**.
-  * 3. Aplică **Algoritmul lui Thompson** pentru a asambla NFA-ul din blocuri de bază (litere, reuniune `|`, concatenare `.`, și Kleene Star `*`).
+ 1. Adaugă explicit operatorii de concatenare (`.`).
+ 2. Convertește expresia din forma Infixată în forma Postfixată folosind algoritmul **Shunting Yard**.
+ 3. Aplică **Algoritmul lui Thompson** pentru a asambla NFA-ul din blocuri de bază (litere, reuniune `|`, concatenare `.`, și Kleene Star `*`).
 * **Output:** Automatul generat este exportat automat într-un fișier text valid (ce poate fi citit direct de simulatorul NFA de la punctul 1).
 
-### 4. Generator de Gramatici (Derivare Stângă)
+### 4. Generator de Gramatici
 Un script care "fabrică" cuvinte pe baza unui set de reguli de producție de tipul `S -> 0S1 | e`.
 * Funcționează ca un generator de derivări de stânga (Leftmost Derivation).
 * Selectează dinamic regulile și afișează în consolă tot traseul cuvântului, de la litera de start până la șirul final de terminale (ex: `S ⇒ 0S1 ⇒ 00S11 ⇒ 0011`).
 
----
-
-## 🛠️ Cum se rulează codul
-
-Asigurați-vă că aveți [Python 3.x](https://www.python.org/) instalat pe sistem.
-Nu sunt necesare dependențe externe (`pip install`). 
-
-Fiecare script poate fi rulat independent din terminal. Exemple:
-
-```bash
-python dpda_simulator.py
-python regex_to_nfa.py
-python generator_gramatici.py
+### 5. Simulator Mașină Turing (Turing Machine) 🏆
+Implementarea completă a celui mai puternic model teoretic de calcul.
+* **Caracteristici:** Simulează o bandă teoretic infinită prin extinderea dinamică a listei în memorie (la stânga sau la dreapta), ori de câte ori capul de citire atinge marginile.
+* **Logica:** Execută tranziții complexe de tipul `stare_curentă, simbol_citit -> stare_nouă, simbol_scris, direcție(R/L)`.
+* **Vizualizare:** Include un mecanism de afișare animată în consolă, arătând mișcarea capului de citire/scriere (`[ ]`) pe bandă, în timp real, pas cu pas.
