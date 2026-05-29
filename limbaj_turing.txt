@@ -1,0 +1,13 @@
+# Masina Turing care face NOT logic (inverseaza 0 si 1)
+STATES: q0, q1, q_accept
+START: q0
+FINALS: q_accept
+BLANK: #
+
+TRANSITIONS:
+# Cat timp citim 0 sau 1, le inversam si mergem la dreapta (R)
+q0, 0 -> q0, 1, R
+q0, 1 -> q0, 0, R
+
+# Cand dam de gol (blank), ne oprim si mergem in starea de acceptare
+q0, # -> q_accept, #, R
