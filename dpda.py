@@ -1,4 +1,5 @@
 def parse_dpda_file(filename):
+    # structura principala unde tinem tot dpda-ul
     dpda = {
         'alphabet': set(),
         'stack_alphabet': set(),
@@ -10,21 +11,25 @@ def parse_dpda_file(filename):
     }
 
     with open(filename, 'r') as f:
+        # flag ca sa stim cand incepem sa citim sagetile
         isParsingTransitions = False
 
         for line in f:
             line = line.strip()
 
-            # Ignoram liniile goale sau comentariile
+            # sarim peste liniile goale sau comentarii
             if not line or line[0] == '#':
                 continue
 
+            # parsam informatiile generale
             if line.startswith('ALPHABET:'):
                 dpda['alphabet'] = {v.strip() for v in line.split(':')[1].split(',')}
             elif line.startswith('STACK_ALPHABET:'):
                 dpda['stack_alphabet'] = {v.strip() for v in line.split(':')[1].split(',')}
             elif line.startswith('STATES:'):
                 dpda['states'] = {v.strip() for v in line.split(':')[1].split(',')}
+
+                # pregatim dictionarul gol de tranzitii pentru fiecare stare
                 for state in dpda['states']:
                     dpda['transitions'][state] = {}
             elif line.startswith('START:'):
@@ -34,18 +39,20 @@ def parse_dpda_file(filename):
             elif line.startswith('FINALS:'):
                 dpda['accept_states'] = {v.strip() for v in line.split(':')[1].split(',')}
             elif line.startswith('TRANSITIONS:'):
+                # de aici incep regulile de functionare
                 isParsingTransitions = True
+
             elif isParsingTransitions:
-                # Parsam linia de forma: stare, simbol, top_stiva -> stare_noua, push_stiva
+                # parsam linia de forma: stare, simbol, top_stiva -> stare_noua, push_stiva
                 left_side, right_side = line.split('->')
                 current_state, symbol, stack_top = [x.strip() for x in left_side.split(',')]
                 next_state, push_symbols = [x.strip() for x in right_side.split(',')]
 
-                # Initializam sub-dictionarele daca nu exista
+                # daca n-am mai bagat nimic pe litera asta, ii facem un dictionar
                 if symbol not in dpda['transitions'][current_state]:
                     dpda['transitions'][current_state][symbol] = {}
 
-                # Salvam tranzitia
+                # mapam starea noua si ce aruncam pe stiva in functie de ce era in varf
                 dpda['transitions'][current_state][symbol][stack_top] = (next_state, push_symbols)
 
     return dpda
@@ -53,7 +60,8 @@ def parse_dpda_file(filename):
 
 def simulate_dpda(dpda, word):
     current_state = dpda['start_state']
-    # Daca stack_start e 'e', incepem cu stiva goala, altfel punem simbolul de start
+
+    # initializam stiva: ori ramane goala, ori ii punem simbolul de start (ex: $)
     stack = [] if dpda['stack_start'] == 'e' else [dpda['stack_start']]
 
     print(f"\n{'=' * 40}")
@@ -63,15 +71,18 @@ def simulate_dpda(dpda, word):
     i = 0
     step_count = 0
 
-    # Folosim o bucla while pentru a putea evalua tranzitii 'e' (epsilon) succesive
-    while step_count < 1000:  # Limita de siguranta contra buclelor infinite in trap states
+    # folosim while in loc de for pentru ca s-ar putea sa stam pe loc in cuvant (pe mutari epsilon)
+    # punem o limita de 1000 de pasi ca sa evitam buclele infinite (trap states)
+    while step_count < 1000:
         step_count += 1
 
-        # Daca am terminat cuvantul, consideram ca primim epsilon ('e') pe input
+        # daca am ramas fara litere, ne comportam ca si cum am primit un epsilon pe banda
         current_symbol = word[i] if i < len(word) else 'e'
-        # Ce se afla in varful stivei (daca e goala, consideram 'e')
+
+        # aruncam un ochi in varful stivei (daca e goala consideram ca e epsilon)
         stack_top = stack[-1] if stack else 'e'
 
+        # flaguri ca sa stim ce am facut tura asta si sa printam corect la final
         transition_found = False
         consumed_input = False
         popped_stack = False
@@ -81,77 +92,66 @@ def simulate_dpda(dpda, word):
         sym_used = None
         stack_used = None
 
-        # SISTEMUL DE DECIZIE AL AUTOMATULUI (CUM ALEGE CE SA FACA MAI DEPARTE)
-
-        # PRIORITATEA 1: "Am o litera pe banda si o potrivesc cu varful stivei!"
-        # Explicație: Este mutarea normala a unui automat. Consumam o litera din cuvant
-        # si ne uitam strict la ce se afla in varful stivei.
-        # Exemplu din limbaj: q0, 0, $ -> q0, 0$ (Citeste '0', are '$' in varf)
+        # PRIORITATEA 1: am litera pe banda si o potrivesc cu varful stivei
+        # asta e mutarea clasica, consumam litera si ne legam de stiva
         if current_symbol != 'e' and current_symbol in dpda['transitions'].get(current_state, {}) and stack_top in \
                 dpda['transitions'][current_state][current_symbol]:
             next_state, push_symbols = dpda['transitions'][current_state][current_symbol][stack_top]
             sym_used = current_symbol
             stack_used = stack_top
             transition_found = True
-            popped_stack = True  # SCOATEM elementul din varf pentru ca l-am potrivit
-            consumed_input = True  # TRECEM la urmatoarea litera din cuvant!
+            popped_stack = True  # scoatem varful vechi
+            consumed_input = True  # am folosit litera, trecem la urmatoarea
 
-        # PRIORITATEA 2: "Citesc litera de pe banda, dar ignor stiva complet!"
-        # Explicație: Vrem sa citim litera, dar regula ne spune ca nu conteaza
-        # ce avem in stiva ('e' la sectiunea top_stiva). Foarte utila pentru
-        # a prinde literele gresite care apar aiurea.
-        # Exemplu din limbaj: q1, 0, e -> q3, e (In q1 nu mai avem voie '0')
+        # PRIORITATEA 2: citesc litera de pe banda, dar ignor stiva complet
+        # perfect pentru cand primesc litere interzise si trebuie sa arunc automatul in trap-state
         elif current_symbol != 'e' and current_symbol in dpda['transitions'].get(current_state, {}) and 'e' in \
                 dpda['transitions'][current_state][current_symbol]:
             next_state, push_symbols = dpda['transitions'][current_state][current_symbol]['e']
             sym_used = current_symbol
             stack_used = 'e'
             transition_found = True
-            popped_stack = False  # NU scoatem nimic din stiva, pentru ca nu am folosit-o
-            consumed_input = True  # TRECEM la urmatoarea litera din cuvant!
+            popped_stack = False  # n am atins stiva
+            consumed_input = True  # am scapat de litera
 
-        # PRIORITATEA 3: "Nu mai am litere (sau nu se potrivesc). Fac o mutare gratuita (e) pe baza stivei!"
-        # Explicație: Abia acum, daca nu am reusit sa consumam nicio litera (sau am
-        # terminat cuvantul), automatul are voie sa aplice o tranzitie epsilon pe banda,
-        # verificand insa varful stivei.
-        # Exemplu din limbaj: q1, e, $ -> q2, $ (S-a terminat cuvantul, stiva e goala -> ACCEPTA)
+        # PRIORITATEA 3: mutare epsilon pe banda, dar folosesc stiva
+        # utila la final cand am terminat cuvantul si vreau sa golesc $ de pe stiva ca sa dau accept
         elif 'e' in dpda['transitions'].get(current_state, {}) and stack_top in dpda['transitions'][current_state]['e']:
             next_state, push_symbols = dpda['transitions'][current_state]['e'][stack_top]
             sym_used = 'e'
             stack_used = stack_top
             transition_found = True
-            popped_stack = True  # SCOATEM elementul din varf
-            consumed_input = False  # RAMANEM la aceeasi litera din cuvant!
+            popped_stack = True  # scoatem de pe stiva
+            consumed_input = False  # nu am citit litera, ramanem pe loc in cuvant
 
-        # PRIORITATEA 4: "Fac o mutare complet in gol (ignor si litera, si stiva)."
-        # Explicație: Ultima solutie de avarie. Nu avem nevoie de input si nu
-        # ne uitam deloc la stiva.
-        # Exemplu din limbaj: q3, e, e -> q3, e (Bucla infinita/trap-state in q3)
+        # PRIORITATEA 4: mutare epsilon completa (ignor si banda si stiva)
         elif 'e' in dpda['transitions'].get(current_state, {}) and 'e' in dpda['transitions'][current_state]['e']:
             next_state, push_symbols = dpda['transitions'][current_state]['e']['e']
             sym_used = 'e'
             stack_used = 'e'
             transition_found = True
-            popped_stack = False  # NU scoatem nimic din stiva
-            consumed_input = False  # RAMANEM la aceeasi litera din cuvant!
+            popped_stack = False
+            consumed_input = False
 
-        # --- DACA NU S-A GASIT NICIO TRANZITIE ---
+        # daca nu s-a potrivit nimic din cascada de mai sus
         if not transition_found:
+            # daca am terminat si operatiile din coada, iesim
             if i == len(word):
-                break  # Am terminat cuvantul si am facut si toate operatiile 'e' ramase
+                break
             else:
+                # altfel e un blocaj
                 print(
                     f"   [!] BLOCAJ: Nu exista tranzitie din '{current_state}', citind '{current_symbol}', cu '{stack_top}' in varful stivei.")
                 break
 
-        # --- EXECUTAM POP ---
+        # executam pop-ul (scoatem de pe stiva daca a cerut regula)
         popped_val = '-'
         if popped_stack and stack:
             popped_val = stack.pop()
 
-        # --- EXECUTAM PUSH ---
+        # executam push-ul (bagam pe stiva daca ne-a dat caractere)
         if push_symbols != 'e':
-            # Le inversam pentru ca primul caracter din string sa ramana in varf
+            # le inversam ca primul element din sir sa ajunga fix in varful stivei la final
             for char in reversed(push_symbols):
                 stack.append(char)
 
@@ -159,15 +159,17 @@ def simulate_dpda(dpda, word):
             f"   [Citesc: '{sym_used}', Stiva_citita: '{stack_used}'] {current_state} -> {next_state} | POP '{popped_val}' | PUSH '{push_symbols}' | Stiva: {stack}")
 
         current_state = next_state
-        if consumed_input:
-            i += 1  # Avansam in cuvant doar daca am consumat o litera
 
-        # Daca am ajuns in starea de gunoi si a inceput bucla infinita de curatare in gol, ne oprim logic
+        # avansam indexul literei doar daca chiar am consumat-o tura asta
+        if consumed_input:
+            i += 1
+
+            # masura de siguranta: daca a picat in trap state (q3) si doar ruleaza in gol, il oprim noi fortat
         if current_state == 'q3' and sym_used == 'e' and stack_used == 'e':
             print(f"   [!] Automatul a blocat executia in starea de esec (q3).")
             break
 
-    # VERIFICAM CONDITIA DE ACCEPTARE
+    # conditia de victorie: am terminat literele si am ajuns unde trebuie
     is_accepted = (i == len(word) and current_state in dpda['accept_states'])
 
     if is_accepted:
@@ -178,10 +180,11 @@ def simulate_dpda(dpda, word):
     return is_accepted
 
 
-# Incarcam limbajul din fisierul creat adineauri
+# RULARE
+# incarcam dpda ul din fisier
 my_dpda = parse_dpda_file('limbaj_dpda.txt')
 
-# Rulam testele cerute de prof
+# testam niste cazuri ca sa fim siguri ca numara bine 0^k 1^k
 simulate_dpda(my_dpda, "0011")  # Corect -> Acceptat
 simulate_dpda(my_dpda, "000111")  # Corect -> Acceptat
 simulate_dpda(my_dpda, "0101")  # Intercalat -> Respins (se duce in q3)

@@ -44,7 +44,7 @@ def gen_word(grm, max_steps=20):
     while any(c.isupper() for c in curr) and step < max_steps:
         step += 1
 
-        # aautam prima litera mare din cuvant
+        # cautam prima litera mare din cuvant
         for i, char in enumerate(curr):
             if char.isupper():
                 c = char  # litera mare gasita
